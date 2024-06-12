@@ -4,7 +4,7 @@
 
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
-use embassy_net::{tcp::TcpSocket, Config, Ipv4Address, Stack, StackResources};
+use embassy_net::{tcp::TcpSocket, Config, Ipv4Address, Ipv4Cidr, StaticConfigV4, Stack, StackResources};
 use embassy_time::{with_timeout, Duration, Timer};
 use esp_backtrace as _;
 use esp_hal_embassy;
@@ -19,8 +19,7 @@ use esp_hal::{
 };
 use esp_println::println;
 use esp_wifi::{
-    initialize,
-    wifi::{
+    initialize, wifi::{
         ClientConfiguration,
         Configuration,
         WifiController,
@@ -28,14 +27,14 @@ use esp_wifi::{
         WifiEvent,
         WifiStaDevice,
         WifiState,
-    },
-    EspWifiInitFor,
+    }, wifi_interface, EspWifiInitFor
 };
 
+use static_cell::StaticCell;
 use heapless::Vec;
-
 extern crate alloc;
 use core::mem::MaybeUninit;
+use alloc::borrow::BorrowMut;
 
 #[global_allocator]
 static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
@@ -94,18 +93,22 @@ async fn main(spawner: Spawner) -> ! {
     esp_hal_embassy::init(&clocks, timer_group0);
 
     // Set the IP addresses and DNS
-    let config = Config::ipv4_static(Default::default());
-    config.address = ip_address;
-    config.dns_servers = Vec::from_slice(&[Ipv4Address::new(4,4,4,4), Ipv4Address::new(1,1,1,1)]);
-
+    let config = Config::ipv4_static(StaticConfigV4 {
+        address: Ipv4Cidr::new(ip_address, 24),
+        gateway: Some(Ipv4Address::from_bytes(&[192, 168, 2, 1])),
+        dns_servers: Default::default(),
+    });
     let seed = 2727;
-    let res = StackResources::<4>::new();
-
-    let stack = Stack::<WifiDevice<'_, WifiStaDevice>>::new(
+    static RESSOURCES : StaticCell<StackResources<4>> = StaticCell::<StackResources::<4>>::new();
+    static STACK : StaticCell<Stack<WifiDevice<'_, WifiStaDevice>>> = StaticCell::new();
+    
+    let stack = STACK.uninit().write(
+        Stack::new(
             wifi_interface,
             config,
-            res,
+            RESSOURCES.init(StackResources::<4>::new()),
             seed
+        )
     );
 
     spawner.spawn(connection(controller)).ok();

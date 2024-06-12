@@ -24,7 +24,7 @@ embassy-futures     = "0.1.1"
 embassy-net         = { version = "0.4.0", features = [ "tcp", "proto-ipv4", "medium-ethernet"] }
 embassy-sync        = "0.5.0"
 embassy-time        = "0.3.0"
-embassy-time-driver = { version = "0.1.0", optional = true }
+embassy-time-driver = { version = "0.1.0" }
 
 esp-println = { version = "0.9.1", features = ["esp32", "log"] }
 log = { version = "0.4.21" }
@@ -37,6 +37,8 @@ esp-wifi = { version = "0.6.0", features = [
     "utils",
     "wifi",
     "tcp",
+    "async",
+    "embassy-net"
 ] }
 heapless = { version = "0.8.0", default-features = false }
 smoltcp = { version = "0.11.0", default-features = false, features = [
@@ -51,6 +53,7 @@ smoltcp = { version = "0.11.0", default-features = false, features = [
     "socket-udp",
 ] }
 
+static_cell = { version = "2.1.0" }
 
 [profile.dev]
 # Rust debug is too slow.
